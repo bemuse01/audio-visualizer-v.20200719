@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <script src="three.min.r118.js"></script>
+        <script src="js/lib/three-circle-audio-visualizer/js/object.js"></script>
+        <script src="js/lib/three-circle-audio-visualizer/js/move.js"></script>
+		<style>
+            body{
+                background: black;
+                padding: 0;
+                margin: 0;
+                overflow: hidden;
+            }
+            #video{
+                position: absolute;
+                min-width: 100%;
+                min-height: 100%;
+            }
+            #frame{
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.75);
+            }
+            #canvas-wrap{
+                filter: drop-shadow(0px 0px 6px rgba(255, 136, 64, 0.6));
+            }
+            #canvas-wrap > div{
+                filter: drop-shadow(0px 0px 6px rgba(255, 136, 64, 0.6));
+            }
+            #canvas{
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                filter: brightness(1.25) drop-shadow(0px 0px 6px rgba(255, 136, 64, 0.6));
+                opacity: 1;
+            }
+		</style>
+	</head>
+	<body>
+    <video id="video" src="song/Boiling Blood.webm" loop></video>
+    <div id="frame"></div>
+    <div id="canvas-wrap">
+        <div>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    
+	<script>
+    let width, height, renderer, scene, camera
+    let clock = new THREE.Clock()
+    let radian = Math.PI / 180
+    let audio, analyser, dataArray, relocatedData
+
+	width = window.innerWidth
+    height = window.innerHeight
+
+    let group = {
+        circle: {
+            first: new THREE.Group(),
+            second: new THREE.Group()
+        }
+    }
+    
+    init()
+	function init(){
+        scene = new THREE.Scene()
+        
+		renderer = new THREE.WebGLRenderer({antialias: true, alpha: true, canvas: canvas})
+		renderer.setSize(width, height)
+		renderer.setClearColor(0x000000)
+        renderer.setClearAlpha(0.0)
+
+		camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000)
+		scene.add(camera)
+        camera.position.z = 50
+        
+        setAudio()
+
+        objects()
+
+        animate()
+
+        window.addEventListener('resize', onWindowResize, false)
+    }
+
+    function setAudio(){
+        let video = document.getElementById('video')
+        video.play()
+
+		let context = new AudioContext()
+		let src = context.createMediaElementSource(video)
+		analyser = context.createAnalyser()
+		src.connect(analyser)
+		analyser.connect(context.destination)
+		analyser.fftSize = 1024
+		let bufferLength = analyser.frequencyBinCount
+        dataArray = new Uint8Array(bufferLength)
+    }
+
+    function objects(){
+        const param = {
+            sample: new THREE.CircleGeometry(10, 164)
+        }
+        object.createCircle(scene, group.circle.second, param)
+        object.createCircle(scene, group.circle.first, param)
+        relocatedData = object.relocateDataArray(param, dataArray)
+    }
+
+    function moves(){
+        const param = {
+            sample: new THREE.CircleGeometry(10, 164),
+            boost: 0.5
+        }
+
+        analyser.getByteFrequencyData(dataArray)
+
+        move.moveCircleVertices(group.circle.second.children[0].geometry.attributes.position, param, dataArray, 1, relocatedData)
+        move.moveCircleVertices(group.circle.first.children[0].geometry.attributes.position, param, dataArray, -1, relocatedData)
+    }
+
+    function getVisibleHeight(depth){
+        let cameraOffset = camera.position.z
+        if(depth < cameraOffset) depth -= cameraOffset
+        else depth += cameraOffset
+        let vFov = camera.fov * radian
+        return 2 * Math.tan(vFov / 2) * Math.abs(depth)
+    }
+
+    function getVisibleWidth(depth){
+        let height = getVisibleHeight(depth)
+        return height * camera.aspect
+    }
+
+    function onWindowResize(){
+		width = window.innerWidth
+		height = window.innerHeight
+
+		camera.aspect = width / height
+		camera.updateProjectionMatrix()
+
+        renderer.setSize(width, height)
+        composer.setSize(width, height);
+    }
+
+	function render(){
+        moves()
+
+        camera.lookAt(scene.position);
+        renderer.render(scene, camera)
+    }
+
+	function animate(){
+		render()
+		requestAnimationFrame(animate)
+	}
+	</script>
+	</body>
+</html>
