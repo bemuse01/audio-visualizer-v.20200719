@@ -1,16 +1,25 @@
 const move = {
-    moveCircleVertices(group, param, dataArray, direction, relocated){
-        /* let offset = param.sample.parameters.radius */
-        let vertices = param.sample.vertices.slice(1, param.sample.vertices.length)
-        for(let i = 0; i < group.array.length / 3; i++){
-            let div = i % vertices.length
-            group.array[i * 3] = vertices[div].x + vertices[div].x * (dataArray[relocated[div]] / 255) * param.boost * direction
-            group.array[i * 3 + 1] = vertices[div].y + vertices[div].y * (dataArray[relocated[div]] / 255) * param.boost * direction
-            group.array[i * 3 + 2] = vertices[div].z + vertices[div].z * (dataArray[relocated[div]] / 255) * param.boost * direction
-            /* group.array[i * 3] = vertices[div].x * (dataArray[relocated[div]] / 255) * param.boost * direction
-            group.array[i * 3 + 1] = vertices[div].y * (dataArray[relocated[div]]  / 255) * param.boost * direction
-            group.array[i * 3 + 2] = vertices[div].z * (dataArray[relocated[div]] / 255) * param.boost * direction */
-        }
-        group.needsUpdate = true
+    moveCircleVertices(arr, param, dataArray, direction, relocated, sample){
+        let vertices = sample.vertices, last = vertices.length - 1
+        arr.vertices.forEach((e, i) => {
+            let index = i === last ? 0 : i
+            e.x = vertices[i].x + vertices[i].x * (dataArray[relocated[index]] / 255) * param.boost * direction 
+            e.y = vertices[i].y + vertices[i].y * (dataArray[relocated[index]] / 255) * param.boost * direction 
+            e.z = vertices[i].z + vertices[i].z * (dataArray[relocated[index]] / 255) * param.boost * direction 
+        })
+        arr.verticesNeedUpdate = true
+    },
+    moveLineVertices(arr, first, second){
+        arr.children.forEach((e, i) => {
+            e.geometry.vertices[0].x = first[i].x
+            e.geometry.vertices[0].y = first[i].y
+            e.geometry.vertices[0].z = first[i].z
+
+            e.geometry.vertices[1].x = second[i].x
+            e.geometry.vertices[1].y = second[i].y
+            e.geometry.vertices[1].z = second[i].z
+
+            e.geometry.verticesNeedUpdate = true
+        })
     }
 }

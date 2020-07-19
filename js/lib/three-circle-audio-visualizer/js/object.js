@@ -1,14 +1,34 @@
 const object = {
-    createCircle(scene, group, param){
-        let geometry = param.sample.clone()
-        let edge = new THREE.EdgesGeometry(geometry)
+    createCircle(scene, group, sample){
+        let geometry = sample.clone()
         let material = new THREE.LineBasicMaterial({
-            color: 0xff8840,
+            color: 0x47d2ff,
             transparent: true,
             opacity: 1.0
         })
-        let mesh = new THREE.Line(edge, material)
+        let mesh = new THREE.Line(geometry, material)
         group.add(mesh)
+        scene.add(group)
+    },
+    createLine(scene, group, circle){
+        let first = circle.first.children[0].geometry.vertices
+        let second = circle.second.children[0].geometry.vertices
+        let vertices = first.slice(0, first.length - 1).length
+
+        for(let i = 0; i < vertices; i++){
+            let geometry = new THREE.Geometry()
+            geometry.vertices.push(new THREE.Vector3(first[i].x, first[i].y, first[i].z))
+            geometry.vertices.push(new THREE.Vector3(second[i].x, second[i].y, second[i].z))
+            
+            let material = new THREE.LineBasicMaterial({
+                color: 0x47d2ff,
+                transparent: true,
+                opacity: 0.25
+            })
+            let mesh = new THREE.Line(geometry, material)
+            group.add(mesh)
+        }
+
         scene.add(group)
     },
     relocateDataArray(param, dataArray){
@@ -26,5 +46,14 @@ const object = {
 
         console.log(arr.concat(arr))
         return arr.concat(arr)
+    },
+    reworkSample(param){
+        let clone = param.sample.clone()
+        let geometry = new THREE.Geometry()
+        clone.vertices.forEach((e, i) => {
+            if(i !== 0) geometry.vertices.push(new THREE.Vector3(e.x, e.y, e.z))
+            if(i === clone.vertices.length - 1) geometry.vertices.push(new THREE.Vector3(clone.vertices[1].x, clone.vertices[1].y, clone.vertices[1].z))
+        })
+        return geometry 
     }
 }
