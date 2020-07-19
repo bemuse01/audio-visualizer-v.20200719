@@ -24,13 +24,13 @@
                 left: 0;
                 width: 100vw;
                 height: 100vh;
-                background: rgba(0, 0, 0, 0.75);
+                background: rgba(0, 0, 0, 0.6);
             }
             #canvas-wrap{
-                filter: drop-shadow(0px 0px 6px rgba(255, 136, 64, 0.6));
+                filter: drop-shadow(0px 0px 6px rgba(71, 210, 255, 0.6));
             }
             #canvas-wrap > div{
-                filter: drop-shadow(0px 0px 6px rgba(255, 136, 64, 0.6));
+                filter: drop-shadow(0px 0px 6px rgba(71, 210, 255, 0.6));
             }
             #canvas{
                 position: absolute;
@@ -38,7 +38,7 @@
                 bottom: 0;
                 left: 0;
                 right: 0;
-                filter: brightness(1.25) drop-shadow(0px 0px 6px rgba(255, 136, 64, 0.6));
+                filter: brightness(1.25) drop-shadow(0px 0px 6px rgba(71, 210, 255, 0.6));
                 opacity: 1;
             }
 		</style>
@@ -56,7 +56,7 @@
     let width, height, renderer, scene, camera
     let clock = new THREE.Clock()
     let radian = Math.PI / 180
-    let audio, analyser, dataArray, relocatedData
+    let audio, analyser, dataArray, relocatedData, reworkedSample
 
 	width = window.innerWidth
     height = window.innerHeight
@@ -65,9 +65,20 @@
         circle: {
             first: new THREE.Group(),
             second: new THREE.Group()
+        },
+        line: new THREE.Group()
+    }
+
+    const param = {
+        circle: {
+            sample: new THREE.CircleGeometry(10, 156),
+            boost: 0.5
+        },
+        line: {
+
         }
     }
-    
+
     init()
 	function init(){
         scene = new THREE.Scene()
@@ -105,24 +116,22 @@
     }
 
     function objects(){
-        const param = {
-            sample: new THREE.CircleGeometry(10, 164)
-        }
-        object.createCircle(scene, group.circle.second, param)
-        object.createCircle(scene, group.circle.first, param)
-        relocatedData = object.relocateDataArray(param, dataArray)
+        relocatedData = object.relocateDataArray(param.circle, dataArray)
+        reworkedSample = object.reworkSample(param.circle)
+
+        object.createCircle(scene, group.circle.second, reworkedSample)
+        object.createCircle(scene, group.circle.first, reworkedSample)
+        object.createLine(scene, group.line, group.circle)
+
+        console.log(group.circle.second)
     }
 
     function moves(){
-        const param = {
-            sample: new THREE.CircleGeometry(10, 164),
-            boost: 0.5
-        }
-
         analyser.getByteFrequencyData(dataArray)
 
-        move.moveCircleVertices(group.circle.second.children[0].geometry.attributes.position, param, dataArray, 1, relocatedData)
-        move.moveCircleVertices(group.circle.first.children[0].geometry.attributes.position, param, dataArray, -1, relocatedData)
+        move.moveCircleVertices(group.circle.second.children[0].geometry, param.circle, dataArray, 1, relocatedData, reworkedSample)
+        move.moveCircleVertices(group.circle.first.children[0].geometry, param.circle, dataArray, -1, relocatedData, reworkedSample)
+        move.moveLineVertices(group.line, group.circle.first.children[0].geometry.vertices, group.circle.second.children[0].geometry.vertices)
     }
 
     function getVisibleHeight(depth){
