@@ -21,5 +21,19 @@ const move = {
 
             e.geometry.verticesNeedUpdate = true
         })
+    },
+    rotateParticle(group, param){
+        group.forEach(e => {
+            e.children[0].rotation.x += param.rotation
+            e.children[0].rotation.y += param.rotation
+
+            e.children[1].rotation.x += param.rotation
+            e.children[1].rotation.y += param.rotation
+        })
+    },
+    updateMixer(mixer, delta, param){
+        mixer.mix.forEach(e => {
+            e.update(delta * param.boost)
+        })
     }
 }
