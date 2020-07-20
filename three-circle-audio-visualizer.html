@@ -41,6 +41,30 @@
                 filter: brightness(1.25) drop-shadow(0px 0px 6px rgba(71, 210, 255, 0.6));
                 opacity: 1;
             }
+            #remove{
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                width: 50px;
+                height: 50px;
+                background: red;
+            }
+            #add{
+                position: absolute;
+                top: 70px;
+                left: 10px;
+                width: 50px;
+                height: 50px;
+                background: white;
+            }
+            #reset{
+                position: absolute;
+                top: 130px;
+                left: 10px;
+                width: 50px;
+                height: 50px;
+                background: green;
+            }
 		</style>
 	</head>
 	<body>
@@ -51,12 +75,16 @@
             <canvas id="canvas"></canvas>
         </div>
     </div>
+    <div id="remove"></div>
+    <div id="add"></div>
+    <div id="reset"></div>
     
 	<script>
     let width, height, renderer, scene, camera
     let clock = new THREE.Clock()
     let radian = Math.PI / 180
-    let audio, analyser, dataArray, relocatedData, reworkedSample
+    let audio, analyser, dataArray, relocatedData, reworkedSample, mixer = {back: {mix: [], clip: []}, wire: {mix: [], clip: []}}
+    let isPlay = true
 
 	width = window.innerWidth
     height = window.innerHeight
@@ -66,7 +94,8 @@
             first: new THREE.Group(),
             second: new THREE.Group()
         },
-        line: new THREE.Group()
+        line: new THREE.Group(),
+        particle: new THREE.Group()
     }
 
     const param = {
@@ -76,6 +105,19 @@
         },
         line: {
 
+        },
+        particle: {
+            length: 50,
+            dist: 2.5,
+            scale: 0.5,
+            opacity: {
+                back: [0, 0.05, 0.1, 0, 0],
+                wire: [0, 0.2, 0.6, 0, 0]
+            },
+            position: [1, 1.4, 1.8, 2.2, 2.6],
+            delay: 0.6,
+            boost: 1,
+            rotation: 0.005
         }
     }
 
@@ -99,6 +141,9 @@
         animate()
 
         window.addEventListener('resize', onWindowResize, false)
+        document.getElementById('remove').addEventListener('click', disposeObjects, false)
+        document.getElementById('add').addEventListener('click', addObjects, false)
+        document.getElementById('reset').addEventListener('click', resetMixer, false)
     }
 
     function setAudio(){
@@ -115,6 +160,28 @@
         dataArray = new Uint8Array(bufferLength)
     }
 
+    function disposeObjects(){
+        isPlay = false
+        object.disposeCircle(scene, group.circle)
+        object.disposeLine(scene, group.line)
+        object.disposeParticle(scene, group.particle)
+        object.disposeParticleMixer(mixer)
+        renderer.renderLists.dispose()
+    }
+
+    function addObjects(){
+        object.createCircle(scene, group.circle.second, reworkedSample)
+        object.createCircle(scene, group.circle.first, reworkedSample)
+        object.createLine(scene, group.line, group.circle)
+        object.createParticle(scene, group.particle, param, radian)
+        object.createParticleMixer(group.particle, mixer, param.particle)
+        isPlay = true
+    }
+
+    function resetMixer(){
+        object.resetMixerTime(mixer, param.particle)
+    }
+
     function objects(){
         relocatedData = object.relocateDataArray(param.circle, dataArray)
         reworkedSample = object.reworkSample(param.circle)
@@ -122,16 +189,29 @@
         object.createCircle(scene, group.circle.second, reworkedSample)
         object.createCircle(scene, group.circle.first, reworkedSample)
         object.createLine(scene, group.line, group.circle)
+        object.createParticle(scene, group.particle, param, radian)
+        object.createParticleMixer(group.particle, mixer, param.particle)
 
-        console.log(group.circle.second)
+        console.log(renderer)
+        console.log(scene)
+        console.log(group.circle)
+        console.log(group.line)
+        console.log(group.particle)
     }
 
     function moves(){
-        analyser.getByteFrequencyData(dataArray)
+        if(isPlay){
+            analyser.getByteFrequencyData(dataArray)
 
-        move.moveCircleVertices(group.circle.second.children[0].geometry, param.circle, dataArray, 1, relocatedData, reworkedSample)
-        move.moveCircleVertices(group.circle.first.children[0].geometry, param.circle, dataArray, -1, relocatedData, reworkedSample)
-        move.moveLineVertices(group.line, group.circle.first.children[0].geometry.vertices, group.circle.second.children[0].geometry.vertices)
+            let delta = clock.getDelta()
+            
+            move.moveCircleVertices(group.circle.second.children[0].geometry, param.circle, dataArray, 1, relocatedData, reworkedSample)
+            move.moveCircleVertices(group.circle.first.children[0].geometry, param.circle, dataArray, -1, relocatedData, reworkedSample)
+            move.moveLineVertices(group.line, group.circle.first.children[0].geometry.vertices, group.circle.second.children[0].geometry.vertices)
+            move.rotateParticle(group.particle.children, param.particle)
+            move.updateMixer(mixer.back, delta, param.particle) 
+            move.updateMixer(mixer.wire, delta, param.particle)
+        }
     }
 
     function getVisibleHeight(depth){
@@ -155,13 +235,12 @@
 		camera.updateProjectionMatrix()
 
         renderer.setSize(width, height)
-        composer.setSize(width, height);
     }
 
 	function render(){
         moves()
 
-        camera.lookAt(scene.position);
+        camera.lookAt(scene.position)
         renderer.render(scene, camera)
     }
 
